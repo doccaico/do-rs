@@ -1,3 +1,4 @@
+use std::io::ErrorKind;
 use std::io::Write;
 use std::process::{Command, Stdio};
 
@@ -52,7 +53,7 @@ pub fn run(args: &[String]) -> Result<()> {
     let mut datum = vec![];
     let mut caps_iter = re.captures_iter(&contents).peekable();
     if caps_iter.peek().is_some() {
-        for caps in re.captures_iter(&contents) {
+        for caps in caps_iter {
             let name = caps.get(1).map_or("", |m| m.as_str());
             let date = caps.get(2).map_or("", |m| m.as_str());
             let post = caps.get(3).map_or("", |m| m.as_str());
@@ -65,12 +66,12 @@ pub fn run(args: &[String]) -> Result<()> {
                     Ok(emoji) => emoji,
                     Err(_) => caps[0].to_string(),
                 })
-                .into_owned();
+                .to_string();
 
             datum.push((name, date, post));
         }
     } else {
-        bail!("no responses found. Please check if the GENRE, ID, or NUMBER is correct");
+        bail!("failed to parse the html. Please check if the GENRE, ID, or NUMBER is correct");
     }
 
     let mut child = Command::new("less")
@@ -87,7 +88,7 @@ pub fn run(args: &[String]) -> Result<()> {
     // less への書き込み (途中で q で閉じられた場合の BrokenPipe エラーを許容する)
     for (name, date, post) in datum {
         if let Err(e) = write!(stdin, "{}:{}\n{}\n", name.cyan(), date.green(), post)
-            && e.kind() != std::io::ErrorKind::BrokenPipe
+            && e.kind() != ErrorKind::BrokenPipe
         {
             let _ = child.kill();
             bail!("error occurred while writing to less: {}", e);

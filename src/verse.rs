@@ -1,3 +1,4 @@
+use std::io::ErrorKind;
 use std::io::Write;
 use std::process::{Command, Stdio};
 
@@ -150,7 +151,7 @@ pub fn run(args: &[String]) -> Result<()> {
 
     // less への書き込み (途中で q で閉じられた場合の BrokenPipe エラーを許容する)
     if let Err(e) = write!(stdin, "{}[{}]\n{}", book.cyan(), chapter.green(), text)
-        && e.kind() != std::io::ErrorKind::BrokenPipe
+        && e.kind() != ErrorKind::BrokenPipe
     {
         let _ = child.kill();
         bail!("error occurred while writing to less: {}", e);

@@ -1,10 +1,9 @@
+use std::io::ErrorKind;
 use std::io::Write;
 use std::path::Path;
 use std::process::{Command, Stdio};
 
 use anyhow::{Context, Result, bail};
-
-// use crate::utils::{eprint_and_exit, print_and_exit};
 
 const HELP_MSG: &str = "
 Usage:
@@ -70,7 +69,7 @@ pub fn run(args: &[String]) -> Result<()> {
 
     // less への書き込み (途中で q で閉じられた場合の BrokenPipe エラーを許容する)
     if let Err(e) = stdin.write_all(&output.stdout)
-        && e.kind() != std::io::ErrorKind::BrokenPipe
+        && e.kind() != ErrorKind::BrokenPipe
     {
         let _ = child.kill();
         bail!("error occurred while writing to less: {}", e);

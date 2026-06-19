@@ -13,7 +13,7 @@ mod diary_search;
 mod gitup;
 mod shitaraba;
 mod verse;
-// mod wiki;
+mod wiki;
 
 // #[path = "nightup/nightup.rs"]
 // mod nightup;
@@ -67,7 +67,7 @@ fn run() -> Result<()> {
         "gitup" => gitup::run(sub_args),
         "shitaraba" => shitaraba::run(sub_args),
         "verse" => verse::run(sub_args),
-        // "wiki" => wiki::run(&args[1..]),
+        "wiki" => wiki::run(sub_args),
         // "nightup" => nightup::run(&args[1..]),
         _ => {
             // eprintln!("unknown command '{}'", command);
