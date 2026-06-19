@@ -63,7 +63,7 @@ pub fn run(args: &[String]) -> Result<()> {
             .context("failed to run 'git'")?;
 
         if !output.status.success() {
-            bail!("'git add .' failed");
+            bail!("'git add .' failed with error: {}", output.status.code().unwrap());
         }
 
         let mut all_output = output.stdout;
@@ -84,7 +84,7 @@ pub fn run(args: &[String]) -> Result<()> {
             .context("failed to run 'git'")?;
 
         if !output.status.success() {
-            bail!(format!(r#"'git commit -m "{}"' failed"#, commit_msg));
+            bail!(r#"'git commit -m "{}"' failed with error: {}"#, commit_msg, output.status.code().unwrap());
         }
 
         let mut all_output = output.stdout;
@@ -103,7 +103,7 @@ pub fn run(args: &[String]) -> Result<()> {
             .context("failed to run 'git'")?;
 
         if !output.status.success() {
-            bail!("'git push' failed");
+            bail!("'git push' failed with error: {}", output.status.code().unwrap());
         }
 
         let mut all_output = output.stdout;

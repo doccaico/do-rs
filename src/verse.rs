@@ -115,6 +115,10 @@ pub fn run(args: &[String]) -> Result<()> {
         .output()
         .context("failed to run 'curl'")?;
 
+    if !output.status.success() {
+        bail!("'curl' failed with error: {}", output.status.code().unwrap());
+    }
+
     let contents = String::from_utf8_lossy(&output.stdout);
 
     let re = Regex::new(r#"(?ms)content">(.+?)</span>"#)
@@ -134,10 +138,7 @@ pub fn run(args: &[String]) -> Result<()> {
             }
         }
     } else {
-        bail!(format!(
-            "no verses found or failed to parse the page: {}",
-            url
-        ));
+        bail!("no verses found or failed to parse the page: {url}");
     }
 
     let mut child = Command::new("less")

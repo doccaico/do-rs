@@ -2,7 +2,7 @@ use std::fs;
 use std::path::Path;
 use std::process::Command;
 
-use anyhow::{Context, Result, bail};
+use anyhow::{bail, Context, Result};
 use regex::Regex;
 
 pub fn run(dist_dir: &str, download_dir: &str) -> Result<()> {
@@ -66,10 +66,7 @@ pub fn run(dist_dir: &str, download_dir: &str) -> Result<()> {
             .context("failed to run 'curl'")?;
 
         if !status.success() {
-            bail!(format!(
-                "'curl' failed with error: {}",
-                status.code().unwrap()
-            ));
+            bail!("'curl' failed with error: {}", status.code().unwrap());
         }
 
         println!("Download (ZIP) is done: {}", local_zip_name);

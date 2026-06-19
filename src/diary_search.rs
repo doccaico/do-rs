@@ -51,6 +51,10 @@ pub fn run(args: &[String]) -> Result<()> {
         .output()
         .context("failed to run 'rg'")?;
 
+    if !output.status.success() {
+        bail!("'rg' failed with error: {}", output.status.code().unwrap());
+    }
+
     if output.stdout.is_empty() {
         println!("no matches found for '{}'", keyword);
         return Ok(());

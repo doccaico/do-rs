@@ -69,6 +69,10 @@ pub fn run(args: &[String]) -> Result<()> {
         .output()
         .context("failed to 'curl'")?;
 
+    if !output.status.success() {
+        bail!("'curl' failed with error: {}", output.status.code().unwrap());
+    }
+
     let raw_json = String::from_utf8_lossy(&output.stdout);
 
     let re = Regex::new(r#""id":(\d+?),"ns":0,"title":"(.+?)""#)
@@ -91,12 +95,13 @@ pub fn run(args: &[String]) -> Result<()> {
                 "{}:{}:{}\n",
                 idx.to_string().magenta(),
                 title.cyan(),
-                format!("https://ja.wikipedia.org/?curid={}", id).green(),
+                format!("https://ja.wikipedia.org/?curid={id}").green(),
             ));
             idx += 1;
         }
     } else {
-        bail!(format!("failed to parse the json\nRaw: {}", raw_json));
+        eprintln!("failed to parse the json");
+        bail!("RawJson: {raw_json}");
     }
 
     let mut child = Command::new("less")
