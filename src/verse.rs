@@ -7,7 +7,9 @@ use regex::Regex;
 
 const HELP_MSG: &str = "
 Usage:
-    do.exe verse 書物 章
+    do.exe verse [OPTION] BOOK CHAPTER
+OPTION:
+    -h, --help                 ヘルプメッセージを表示
 
 Old-Testament:
     創世記:GEN(1:50)
