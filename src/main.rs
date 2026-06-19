@@ -12,7 +12,7 @@ mod delete_duplicate_path;
 mod diary_search;
 mod gitup;
 mod shitaraba;
-// mod verse;
+mod verse;
 // mod wiki;
 
 // #[path = "nightup/nightup.rs"]
@@ -66,7 +66,7 @@ fn run() -> Result<()> {
         "delete-duplicate-path" => delete_duplicate_path::run(),
         "gitup" => gitup::run(sub_args),
         "shitaraba" => shitaraba::run(sub_args),
-        // "verse" => verse::run(&args[1..]),
+        "verse" => verse::run(sub_args),
         // "wiki" => wiki::run(&args[1..]),
         // "nightup" => nightup::run(&args[1..]),
         _ => {
