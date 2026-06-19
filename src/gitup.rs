@@ -1,6 +1,6 @@
 use anyhow::{Context, Result, bail};
 use std::path::Path;
-use std::process;
+use std::process::Command;
 
 const HELP_MSG: &str = "
 Usage:
@@ -34,7 +34,7 @@ pub fn run(args: &[String]) -> Result<()> {
     };
 
     {
-        let output = process::Command::new("git")
+        let output = Command::new("git")
             .current_dir(dir_path)
             .args(["status", "--porcelain"])
             .output()
@@ -56,7 +56,7 @@ pub fn run(args: &[String]) -> Result<()> {
     {
         println!("==> Running: git add .");
 
-        let output = process::Command::new("git")
+        let output = Command::new("git")
             .current_dir(dir_path)
             .args(["add", "."])
             .output()
@@ -75,16 +75,16 @@ pub fn run(args: &[String]) -> Result<()> {
     }
 
     {
-        println!("==> Running: git commit -m \"{}\"", commit_msg);
+        println!(r#"==> Running: git commit -m "{}""#, commit_msg);
 
-        let output = process::Command::new("git")
+        let output = Command::new("git")
             .current_dir(dir_path)
             .args(["commit", "-m", commit_msg])
             .output()
             .context("failed to run 'git'")?;
 
         if !output.status.success() {
-            bail!(format!("'git commit -m \"{}\"' failed", commit_msg));
+            bail!(format!(r#"'git commit -m "{}"' failed"#, commit_msg));
         }
 
         let mut all_output = output.stdout;
@@ -96,7 +96,7 @@ pub fn run(args: &[String]) -> Result<()> {
     {
         println!("==> Running: git push");
 
-        let output = process::Command::new("git")
+        let output = Command::new("git")
             .current_dir(dir_path)
             .arg("push")
             .output()

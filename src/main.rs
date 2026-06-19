@@ -11,7 +11,7 @@ use std::process::ExitCode;
 mod delete_duplicate_path;
 mod diary_search;
 mod gitup;
-// mod shitaraba;
+mod shitaraba;
 // mod verse;
 // mod wiki;
 
@@ -65,7 +65,7 @@ fn run() -> Result<()> {
         "diary-search" => diary_search::run(sub_args),
         "delete-duplicate-path" => delete_duplicate_path::run(),
         "gitup" => gitup::run(sub_args),
-        // "shitaraba" => shitaraba::run(&args[1..]),
+        "shitaraba" => shitaraba::run(sub_args),
         // "verse" => verse::run(&args[1..]),
         // "wiki" => wiki::run(&args[1..]),
         // "nightup" => nightup::run(&args[1..]),

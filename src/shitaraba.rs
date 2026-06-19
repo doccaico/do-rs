@@ -1,6 +1,9 @@
-use regex::Regex;
 use std::io::Write;
-use std::process::{Command, ExitCode, Stdio};
+use std::process::{Command, Stdio};
+
+use anyhow::{Context, Result, bail};
+use colored::Colorize;
+use regex::Regex;
 
 const HELP_MSG: &str = "
 Usage:
@@ -8,24 +11,23 @@ Usage:
 OPTION:
     -h, --help                 ヘルプメッセージを表示";
 
-fn convert_cp(code_point: &str) -> Result<String, String> {
+fn convert_cp(code_point: &str) -> Result<String> {
     let cp_u32 = code_point
         .parse::<u32>()
-        .map_err(|_| "failed to 'parse::<u32>'".to_string())?;
+        .context("failed to 'parse::<u32>'".to_string())?;
 
     char::from_u32(cp_u32)
         .map(|c| c.to_string())
-        .ok_or_else(|| "failed to 'char::from_u32'".to_string())
+        .context("failed to 'char::from_u32'".to_string())
 }
 
-pub fn run(args: &[String]) -> ExitCode {
+pub fn run(args: &[String]) -> Result<()> {
     if args.len() == 1 && (args[0] == "-h" || args[0] == "--help") {
         println!("{}", HELP_MSG);
-        return ExitCode::SUCCESS;
+        return Ok(());
     }
     if args.len() != 3 {
-        eprintln!("{}", HELP_MSG);
-        return ExitCode::FAILURE;
+        bail!("{}", HELP_MSG);
     }
 
     let (genre, id, number) = (&args[0], &args[1], &args[2]);
@@ -38,37 +40,37 @@ pub fn run(args: &[String]) -> ExitCode {
             &format!(r#"curl -sSL -A "Mozilla/5.0" {url} | busybox64u iconv -f EUC-JP -t UTF-8"#),
         ])
         .output()
-        .expect("failed to 'curl and busybox64u iconv'");
+        .context("failed to 'curl or busybox64u'")?;
 
-    let re = Regex::new(r"<dt(?ms)\b.+?<b>(\w+?)</b>.+?：(.+?)</dt>.+?<dd>(.+?)</dd>")
-        .expect("failed to compile shitaraba.run.re (regex)");
+    let re = Regex::new(r"(?ms)<dt.+?<b>(\w+?)</b>.+?：(.+?)</dt>.+?<dd>(.+?)<br>          <br>")
+        .context("failed to compile shitaraba.run.re (regex)")?;
     let re_emoji =
-        Regex::new(r"&#(\d+?);").expect("failed to compile shitaraba.run.re_emoji (regex)");
-    let re_tag = Regex::new(r#"<[^>]*?>"#).expect("failed to compile shitaraba.run.re_tag (regex)");
+        Regex::new(r"&#(\d+?);").context("failed to compile shitaraba.run.re_emoji (regex)")?;
 
-    let contents = String::from_utf8(output.stdout).expect("failed to 'String::from_utf8'");
+    let contents = String::from_utf8_lossy(&output.stdout);
 
     let mut datum = vec![];
-    for caps in re.captures_iter(&contents) {
-        let name = caps.get(1).map_or("", |m| m.as_str());
-        let date = caps.get(2).map_or("", |m| m.as_str());
-        let post = caps.get(3).map_or("", |m| m.as_str());
+    let mut caps_iter = re.captures_iter(&contents).peekable();
+    if caps_iter.peek().is_some() {
+        for caps in re.captures_iter(&contents) {
+            let name = caps.get(1).map_or("", |m| m.as_str());
+            let date = caps.get(2).map_or("", |m| m.as_str());
+            let post = caps.get(3).map_or("", |m| m.as_str());
 
-        let name = re_tag.replace_all(name, "").trim().to_string();
-        let date = date.trim_ascii_end().to_string();
-        let post = post
-            .trim_ascii()
-            .replace("<br>          <br>", "\n")
-            .replace("<br>", "\n");
-        let post = re_tag.replace_all(&post, "");
-        let final_post = re_emoji
-            .replace_all(&post, |caps: &regex::Captures| match convert_cp(&caps[1]) {
-                Ok(emoji) => emoji,
-                Err(_) => caps[0].to_string(),
-            })
-            .into_owned();
+            let name = name.trim().to_string();
+            let date = date.trim_ascii_end().to_string();
+            let post = post.trim_ascii_start().replace("<br>", "");
+            let post = re_emoji
+                .replace_all(&post, |caps: &regex::Captures| match convert_cp(&caps[1]) {
+                    Ok(emoji) => emoji,
+                    Err(_) => caps[0].to_string(),
+                })
+                .into_owned();
 
-        datum.push((name, date, final_post));
+            datum.push((name, date, post));
+        }
+    } else {
+        bail!("no responses found. Please check if the GENRE, ID, or NUMBER is correct");
     }
 
     let mut child = Command::new("less")
@@ -77,33 +79,25 @@ pub fn run(args: &[String]) -> ExitCode {
         .stdout(Stdio::inherit())
         .stderr(Stdio::inherit())
         .spawn()
-        .expect("failed to spawn 'less'");
+        .context("failed to spawn 'less'")?;
 
     // `stdin` を `take()` で完全に外に切り出す
-    let mut stdin = child.stdin.take().expect("failed to open stdin");
+    let mut stdin = child.stdin.take().context("failed to open stdin")?;
 
+    // less への書き込み (途中で q で閉じられた場合の BrokenPipe エラーを許容する)
     for (name, date, post) in datum {
-        if write!(
-            stdin,
-            "\x1b[36m{name}\x1b[0m: \x1b[32m{date}\x1b[0m\n{post}"
-        )
-        .is_err()
+        if let Err(e) = write!(stdin, "{}:{}\n{}\n", name.cyan(), date.green(), post)
+            && e.kind() != std::io::ErrorKind::BrokenPipe
         {
-            eprintln!("failed to write to less stdin");
             let _ = child.kill();
-            let _ = child.wait();
-            return ExitCode::FAILURE;
+            bail!("error occurred while writing to less: {}", e);
         }
     }
 
     // 書き込みが完了したため、明示的に `stdin` を閉じて less に通知する
     drop(stdin);
 
-    match child.wait() {
-        Ok(status) if status.success() => ExitCode::SUCCESS,
-        _ => {
-            eprintln!("less exited with an error");
-            ExitCode::FAILURE
-        }
-    }
+    let _ = child.wait().context("'less' failed")?;
+
+    Ok(())
 }

@@ -1,7 +1,8 @@
-use anyhow::{Context, Result, bail};
 use std::io::Write;
 use std::path::Path;
-use std::process;
+use std::process::{Command, Stdio};
+
+use anyhow::{Context, Result, bail};
 
 // use crate::utils::{eprint_and_exit, print_and_exit};
 
@@ -37,7 +38,7 @@ pub fn run(args: &[String]) -> Result<()> {
 
     let keyword = &args[0];
 
-    let output = process::Command::new("rg")
+    let output = Command::new("rg")
         .args([
             "--color",
             "always",
@@ -56,11 +57,11 @@ pub fn run(args: &[String]) -> Result<()> {
         return Ok(());
     }
 
-    let mut child = process::Command::new("less")
+    let mut child = Command::new("less")
         .args(["-R", "-i", "--silent"])
-        .stdin(process::Stdio::piped())
-        .stdout(process::Stdio::inherit())
-        .stderr(process::Stdio::inherit())
+        .stdin(Stdio::piped())
+        .stdout(Stdio::inherit())
+        .stderr(Stdio::inherit())
         .spawn()
         .context("failed to spawn 'less'")?;
 
@@ -78,7 +79,7 @@ pub fn run(args: &[String]) -> Result<()> {
     // 書き込みが完了したため、明示的に 'stdin' を閉じて less に通知する
     drop(stdin);
 
-    let _ = child.wait().context("'less' failed with")?;
+    let _ = child.wait().context("'less' failed")?;
 
     Ok(())
 }
