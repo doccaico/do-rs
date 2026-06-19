@@ -6,8 +6,8 @@ use anyhow::{Context, Result, bail};
 mod go;
 mod odin;
 mod v;
+mod vim;
 mod zig;
-// mod vim;
 
 const HELP_MSG: &str = r"
 Usage:
@@ -76,7 +76,7 @@ pub fn run(args: &[String]) -> Result<()> {
                 .context(format!("not found key: '{}'", cmd))?;
             v::run(dist_dir, &download_dir)
         }
-        // "vim" => vim::run("", &download_dir),
+        "vim" => vim::run(),
         _ => {
             eprintln!("nightup: unknown command '{}'", command);
             bail!(HELP_MSG);

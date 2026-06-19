@@ -1,101 +1,74 @@
-use regex::Regex;
 use std::env;
+use std::process::Command;
 
-use std::process::{Command, ExitCode};
+use anyhow::{Context, Result, bail};
+use regex::Regex;
 
-pub fn run(_dist_dir: &str, _download_dir: &str) -> ExitCode {
-    let output = match Command::new("curl")
-        .args([
-            "-sSL",
-            "-A",
-            "Mozilla/5.0",
-            "https://api.github.com/repos/vim/vim-win32-installer/releases/latest",
-        ])
+pub fn run() -> Result<()> {
+    let json_url = "https://api.github.com/repos/vim/vim-win32-installer/releases/latest";
+
+    // curlを実行してモードjsonのテキストデータを取得
+    let output = Command::new("curl")
+        .args(["-sSL", "-A", "Mozilla/5.0", json_url])
         .output()
-    {
-        Ok(out) => out,
-        Err(_) => {
-            eprintln!("failed to 'curl'");
-            return ExitCode::FAILURE;
-        }
-    };
+        .context("failed to run 'curl'")?;
+
+    if !output.status.success() {
+        bail!(
+            "'curl' failed with error: {}",
+            output.status.code().unwrap()
+        );
+    }
     println!("Download (json) is done");
 
-    let contents = match String::from_utf8(output.stdout) {
-        Ok(contents) => contents,
-        Err(_) => {
-            eprintln!("failed to 'String::from_utf8'");
-            return ExitCode::FAILURE;
-        }
-    };
+    let contents = String::from_utf8_lossy(&output.stdout);
 
     // ダウンロードURLを取得する
-    let re_url = Regex::new(r#""browser_download_url":\s*"(https://[^"]+_x64_signed\.exe)""#)
-        .expect("failed to compile vim.re_url (regex)");
+    let re_url = Regex::new(
+        r#""name":"gvim_.+?_x64_signed\.exe".+?"browser_download_url":"(https://github.com/vim/vim-win32-installer/releases/download/.+?_x64_signed\.exe)""#,
+    )
+    .context("failed to compile vim.re_url (regex)")?;
 
     // 抽出できた URL を格納する変数
-    let mut download_url = String::new();
-
-    if let Some(caps) = re_url.captures(&contents)
-        && let Some(mat) = caps.get(1)
-    {
-        download_url = mat.as_str().to_string();
-    }
-
-    if download_url.is_empty() {
-        eprintln!("failed to find ZIP URL for gvim-x64-signed");
-        return ExitCode::FAILURE;
-    }
-
+    let download_url = re_url
+        .captures(&contents)
+        .and_then(|caps| caps.get(1))
+        .map(|mat| mat.as_str().to_string())
+        .context("failed to find ZIP URL for gvim-x64-signed")?;
     println!("Download URL: {}", download_url);
 
-    let download_dir = {
-        let mut dir = match env::home_dir() {
-            Some(path) => path,
-            None => {
-                eprintln!("Impossible to get your home dir!");
-                return ExitCode::FAILURE;
-            }
-        };
+    let user_download_dir = {
+        let mut dir = env::home_dir().context("Impossible to get your home dir!")?;
         dir.push("Downloads");
         dir
     };
 
-    let output = match Command::new("curl")
-        .current_dir(&download_dir)
-        .args(["-fsSOL", "-A", "Mozilla/5.0", &download_url])
-        .output()
+    // curlで最新のZIPファイルをダウンロード
     {
-        Ok(out) => out,
-        Err(_) => {
-            eprintln!("failed to 'curl ZIP file'");
-            return ExitCode::FAILURE;
+        let status = Command::new("curl")
+            .current_dir(&user_download_dir)
+            .args(["-fsSLO", "-A", "Mozilla/5.0", &download_url])
+            .status()
+            .context("failed to run 'curl'")?;
+
+        if !status.success() {
+            bail!("'curl' failed with error: {}", status.code().unwrap());
         }
-    };
-
-    if !output.status.success() {
-        eprintln!("curl failed with status: {:?}", output.status);
-        return ExitCode::FAILURE;
+        println!("💓The download was successful💓");
     }
-    println!("Download (ZIP) is done");
 
-    let start_status = match Command::new("cmd")
-        .current_dir(&download_dir)
-        .args(["/C", "start", "explorer", "."])
-        .status()
     {
-        Ok(out) => out,
-        Err(_) => {
-            eprintln!("failed to 'start explorer .'");
-            return ExitCode::FAILURE;
+        let status = Command::new("cmd")
+            .current_dir(&user_download_dir)
+            .args(["/C", "start", "explorer", "."])
+            .status()
+            .context("failed to run 'cmd'")?;
+
+        if !status.success() {
+            bail!("'start' failed with status: {}", status.code().unwrap());
         }
-    };
-
-    if !start_status.success() {
-        eprintln!("start failed with status: {:?}", output.status);
-        return ExitCode::FAILURE;
+        println!("Opened EXPLORER.EXE");
     }
-    println!("Opened EXPLORER.EXE");
 
-    ExitCode::SUCCESS
+    Ok(())
 }

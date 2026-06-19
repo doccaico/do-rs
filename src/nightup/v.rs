@@ -25,7 +25,7 @@ pub fn run(dist_dir: &str, download_dir: &str) -> Result<()> {
     let contents = String::from_utf8_lossy(&output.stdout);
 
     // ダウンロードURLを取得する
-    let re_url = Regex::new(r#""name":"v_windows.zip".+?"browser_download_url":"(https://github.com/vlang/v/releases/download/.+?v_windows\.zip)""#)
+    let re_url = Regex::new(r#""name":"v_windows\.zip".+?"browser_download_url":"(https://github.com/vlang/v/releases/download/.+?v_windows\.zip)""#)
         .context("failed to compile v.re_url (regex)")?;
 
     // 抽出できた URL を格納する変数
