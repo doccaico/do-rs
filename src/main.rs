@@ -1,13 +1,7 @@
 use anyhow::{Result, bail};
 use std::env;
 use std::process::ExitCode;
-// use std::process;
-// use crate::utils::{eprint_and_exit, print_and_exit};
-// mod utils{eprint_and_exit, print_and_exit};
-// use crate::utils::eprint_and_exit;
 
-// mod utils;
-// use crate::utils::{eprint_and_exit, print_and_exit};
 mod delete_duplicate_path;
 mod diary_search;
 mod gitup;
@@ -15,8 +9,8 @@ mod shitaraba;
 mod verse;
 mod wiki;
 
-// #[path = "nightup/nightup.rs"]
-// mod nightup;
+#[path = "nightup/nightup.rs"]
+mod nightup;
 
 const HELP_MSG: &str = "
 Usage:
@@ -68,11 +62,8 @@ fn run() -> Result<()> {
         "shitaraba" => shitaraba::run(sub_args),
         "verse" => verse::run(sub_args),
         "wiki" => wiki::run(sub_args),
-        // "nightup" => nightup::run(&args[1..]),
+        "nightup" => nightup::run(sub_args),
         _ => {
-            // eprintln!("unknown command '{}'", command);
-            // return ExitCode::FAILURE;
-            // bail!("unknown command '{}'\n\n{}", command, HELP_MSG);
             eprintln!("{}", HELP_MSG);
             eprintln!();
             bail!("unknown command '{}'", command);
