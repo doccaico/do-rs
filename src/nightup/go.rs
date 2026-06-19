@@ -1,151 +1,124 @@
-use regex::Regex;
 use std::fs;
 use std::path::Path;
-use std::process::{Command, ExitCode};
+use std::process::Command;
 
-use crate::utils;
+use anyhow::{Context, Result, bail};
+use regex::Regex;
 
-pub fn run(dist_dir: &str, download_dir: &str) -> ExitCode {
-    let output = match Command::new("curl")
-        .args(["-sSL", "-A", "Mozilla/5.0", "https://go.dev/dl/?mode=json"])
+pub fn run(dist_dir: &str, download_dir: &str) -> Result<()> {
+    let json_url = "https://go.dev/dl/?mode=json";
+
+    // curlを実行してモードjsonのテキストデータを取得
+    let output = Command::new("curl")
+        .args(["-sSL", "-A", "Mozilla/5.0", json_url])
         .output()
-    {
-        Ok(out) => out,
-        Err(_) => {
-            eprintln!("failed to 'curl'");
-            return ExitCode::FAILURE;
-        }
-    };
+        .context("failed to run 'curl'")?;
+
+    if !output.status.success() {
+        bail!(
+            "'curl' failed with error: {}",
+            output.status.code().unwrap()
+        );
+    }
     println!("Download (json) is done");
 
-    let contents = match String::from_utf8(output.stdout) {
-        Ok(contents) => contents,
-        Err(_) => {
-            eprintln!("failed to 'String::from_utf8'");
-            return ExitCode::FAILURE;
-        }
-    };
+    let contents = String::from_utf8_lossy(&output.stdout);
 
     // ダウンロードURLを取得する
-    let re_url = Regex::new(r#""filename":\s*"(go[0-9.]+\.windows-amd64\.zip)""#)
+    let re_filename = Regex::new(r#""filename":\s*"(go[0-9.]+\.windows-amd64\.zip)""#)
         .expect("failed to compile go.re_url (regex)");
 
     // 抽出できた URL を格納する変数
-    let mut filename = String::new();
-
-    if let Some(caps) = re_url.captures(&contents)
-        && let Some(mat) = caps.get(1)
-    {
-        filename = mat.as_str().to_string();
-    }
-
-    if filename.is_empty() {
-        eprintln!("failed to find ZIP URL for go-windows-amd64");
-        return ExitCode::FAILURE;
-    }
+    let filename = re_filename
+        .captures(&contents)
+        .and_then(|caps| caps.get(1))
+        .map(|mat| mat.as_str().to_string())
+        .context("failed to find filename for go-windows-amd64")?;
 
     let download_url = format!("https://go.dev/dl/{}", filename);
-
     println!("Download URL: {}", download_url);
 
+    // ワークディレクトリの準備
     let work_dir_name = "go-latest-upgrade-working";
     let work_dir_path = Path::new(download_dir).join(work_dir_name);
 
+    // 既存の古いワークフォルダがあれば中身ごと再帰削除
     if work_dir_path.exists() {
-        if let Err(e) = fs::remove_dir_all(&work_dir_path) {
-            eprintln!("failed to remove {}: {}", work_dir_path.display(), e);
-            return ExitCode::FAILURE;
-        }
-        println!(r#"Removed: "{}""#, work_dir_path.display());
+        fs::remove_dir_all(&work_dir_path)
+            .context(format!("failed to remove '{}'", work_dir_path.display()))?;
+        println!("Removed: '{}'", work_dir_path.display());
     }
 
-    if let Err(e) = fs::create_dir_all(&work_dir_path) {
-        eprintln!("failed to create {}: {}", work_dir_path.display(), e);
-        return ExitCode::FAILURE;
-    }
-    println!(r#"Created: "{}""#, work_dir_path.display());
+    // 新しくワークフォルダを作成
+    fs::create_dir_all(&work_dir_path)
+        .context(format!("failed to create {}", work_dir_path.display()))?;
+    println!("Created: '{}'", work_dir_path.display());
 
-    // これ以降、どこで `return` しても `work_dir_path` は自動削除される
-    let mut cleanup = utils::CleanupDir {
-        path: work_dir_path.clone(),
-        active: true,
-    };
+    let local_zip_name = "go-latest.zip";
+    let local_zip_path = Path::new(&work_dir_path).join(local_zip_name);
 
-    let local_zip = "go-latest.zip";
-
-    let output = match Command::new("curl")
-        .current_dir(&work_dir_path)
-        .args(["-fsSL", "-A", "Mozilla/5.0", &download_url, "-o", local_zip])
-        .output()
+    // curlで最新のZIPファイルをダウンロード
     {
-        Ok(out) => out,
-        Err(_) => {
-            eprintln!("failed to 'curl ZIP file'");
-            return ExitCode::FAILURE;
+        let status = Command::new("curl")
+            .current_dir(&work_dir_path)
+            .args([
+                "-fsSL",
+                "-A",
+                "Mozilla/5.0",
+                &download_url,
+                "-o",
+                local_zip_name,
+            ])
+            .status()
+            .context("failed to run 'curl'")?;
+
+        if !status.success() {
+            bail!("'curl' failed with error: {}", status.code().unwrap());
         }
-    };
-
-    if !output.status.success() {
-        eprintln!("curl failed with status: {:?}", output.status);
-        return ExitCode::FAILURE;
+        println!("Download (ZIP) is done: {}", local_zip_name);
     }
-    println!("Download (ZIP) is done");
 
-    let output = match Command::new("tar")
-        .current_dir(&work_dir_path)
-        .args(["-xf", local_zip, "--strip-components=1"])
-        .output()
+    // tarコマンドでアーカイブを展開
     {
-        Ok(out) => out,
-        Err(_) => {
-            eprintln!("failed to run OS native 'tar'. Make sure Windows 10/11 is updated.");
-            return ExitCode::FAILURE;
-        }
-    };
+        let status = Command::new("tar")
+            .current_dir(&work_dir_path)
+            .args(["-xf", local_zip_name, "--strip-components=1"])
+            .status()
+            .context("failed to run 'tar'")?;
 
-    if !output.status.success() {
-        eprintln!("tar failed with status: {:?}", output.status);
-        return ExitCode::FAILURE;
-    }
-    println!("Extraction is done");
-
-    // 後始末と配置
-    let zip_path = work_dir_path.join(local_zip);
-    if zip_path.exists() {
-        if let Err(e) = fs::remove_file(&zip_path) {
-            eprintln!("failed to remove {}: {}", zip_path.display(), e);
-            return ExitCode::FAILURE;
+        if !status.success() {
+            bail!("'tar' failed with error: {}", status.code().unwrap());
         }
-        println!(r#"Removed: "{}""#, zip_path.display());
+        println!("Extraction is done");
     }
 
-    // 配置（アップデートの適用）
+    // ダウンロードしたZIPを削除
+    if local_zip_path.exists() {
+        fs::remove_file(&local_zip_path)
+            .context(format!("failed to remove '{}'", local_zip_path.display()))?;
+        println!("Removed: '{}'", local_zip_path.display());
+    }
+
+    // アップデート処理
     let target_path = Path::new(dist_dir);
-    // 既存の古いインストールディレクトリがあれば削除
+
+    // 既存のインストールされているフォルダを中身ごと再帰削除
     if target_path.exists() {
-        if let Err(e) = fs::remove_dir_all(target_path) {
-            eprintln!("failed to remove old dist directory: {}", e);
-            return ExitCode::FAILURE;
-        }
-        println!(r#"Removed: "{}""#, target_path.display());
+        fs::remove_dir_all(target_path).context("failed to remove old dist directory")?;
+        println!("Removed: '{}'", target_path.display());
     }
 
-    // 中身がファイル群だけになったワークスペースそのものを
-    // そのまま dist_dir のパスへ移動リネームする
-    if let Err(e) = fs::rename(&work_dir_path, target_path) {
-        eprintln!("failed to move extracted directory to dist: {}", e);
-        return ExitCode::FAILURE;
-    }
-
-    cleanup.active = false; // 移動に成功したため、Drop時の削除を免除する
+    // ワークフォルダを配信先にリネーム (移動)
+    fs::rename(&work_dir_path, target_path)
+        .context("failed to move extracted directory to dist")?;
 
     println!(
-        r#"Moved: "{}" to "{}""#,
+        "Moved: '{}' to '{}'",
         work_dir_path.display(),
         target_path.display()
     );
 
-    println!(r#"Updated: "{}""#, dist_dir);
+    println!("💓The update was successful💓");
 
-    ExitCode::SUCCESS
+    Ok(())
 }

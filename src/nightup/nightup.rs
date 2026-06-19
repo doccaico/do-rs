@@ -3,9 +3,9 @@ use std::env;
 
 use anyhow::{Context, Result, bail};
 
+mod go;
+mod odin;
 mod zig;
-// mod odin;
-// mod go;
 // mod v;
 // mod vim;
 
@@ -24,8 +24,8 @@ OPTION:
 [Windows]
 zig=C:\Langs\zig
 odin=C:\Langs\odin
-v=C:\Langs\v
-go=C:\Langs\go";
+go=C:\Langs\go
+v=C:\Langs\v";
 
 pub fn run(args: &[String]) -> Result<()> {
     if args.len() != 1 {
@@ -58,26 +58,18 @@ pub fn run(args: &[String]) -> Result<()> {
                 .context(format!("not found key: '{}'", cmd))?;
             zig::run(dist_dir, &download_dir)
         }
-        // "odin" => {
-        //     let dist_dir = match section.get("odin") {
-        //         Some(path) => path,
-        //         None => {
-        //             eprintln!(r#"nightup ini: not found path: "odin""#);
-        //             return ExitCode::FAILURE;
-        //         }
-        //     };
-        //     odin::run(dist_dir, &download_dir)
-        // }
-        // "v" => {
-        //     let dist_dir = match section.get("v") {
-        //         Some(path) => path,
-        //         None => {
-        //             eprintln!(r#"nightup ini: not found path: "v""#);
-        //             return ExitCode::FAILURE;
-        //         }
-        //     };
-        //     v::run(dist_dir, &download_dir)
-        // }
+        cmd @ "odin" => {
+            let dist_dir = section
+                .get(cmd)
+                .context(format!("not found key: '{}'", cmd))?;
+            odin::run(dist_dir, &download_dir)
+        }
+        cmd @ "go" => {
+            let dist_dir = section
+                .get(cmd)
+                .context(format!("not found key: '{}'", cmd))?;
+            go::run(dist_dir, &download_dir)
+        }
         // "go" => {
         //     let dist_dir = match section.get("go") {
         //         Some(path) => path,

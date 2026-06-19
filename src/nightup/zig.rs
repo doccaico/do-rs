@@ -2,7 +2,7 @@ use std::fs;
 use std::path::Path;
 use std::process::Command;
 
-use anyhow::{bail, Context, Result};
+use anyhow::{Context, Result, bail};
 use regex::Regex;
 
 pub fn run(dist_dir: &str, download_dir: &str) -> Result<()> {
@@ -12,8 +12,7 @@ pub fn run(dist_dir: &str, download_dir: &str) -> Result<()> {
     let output = Command::new("curl")
         .args(["-sSL", "-A", "Mozilla/5.0", json_url])
         .output()
-        .context("failed to 'curl'")?;
-
+        .context("failed to run 'curl'")?;
     println!("Download (index.json) is done");
 
     let contents = String::from_utf8_lossy(&output.stdout);
@@ -28,7 +27,6 @@ pub fn run(dist_dir: &str, download_dir: &str) -> Result<()> {
         .and_then(|caps| caps.get(1))
         .map(|mat| mat.as_str().to_string())
         .context("failed to find ZIP URL for x86_64-windows master")?;
-
     println!("Download URL: {}", download_url);
 
     // ワークディレクトリの準備
@@ -68,7 +66,6 @@ pub fn run(dist_dir: &str, download_dir: &str) -> Result<()> {
         if !status.success() {
             bail!("'curl' failed with error: {}", status.code().unwrap());
         }
-
         println!("Download (ZIP) is done: {}", local_zip_name);
     }
 
@@ -83,15 +80,13 @@ pub fn run(dist_dir: &str, download_dir: &str) -> Result<()> {
         if !status.success() {
             bail!("'tar' failed with error: {}", status.code().unwrap());
         }
-
         println!("Extraction is done");
     }
 
     // ダウンロードしたZIPを削除
     if local_zip_path.exists() {
         fs::remove_file(&local_zip_path)
-            .context(format!("failed to remove '{}'", local_zip_path.display(),))?;
-
+            .context(format!("failed to remove '{}'", local_zip_path.display()))?;
         println!("Removed: '{}'", local_zip_path.display());
     }
 
