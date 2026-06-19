@@ -71,10 +71,8 @@ pub fn run(args: &[String]) -> Result<()> {
 
     let raw_json = String::from_utf8_lossy(&output.stdout);
 
-    // let re = Regex::new(r#""id":\s*(\d+).*?"title":\s*"([^"]+?)""#)
-    //     .expect("failed to compile wiki.run.re (regex)");
     let re = Regex::new(r#""id":(\d+?),"ns":0,"title":"(.+?)""#)
-        .expect("failed to compile wiki.run.re (regex)");
+        .context("failed to compile wiki.run.re (regex)")?;
 
     let re_hex = Regex::new(r"\\u([0-9a-fA-F]{4})")
         .context("failed to compile wiki.decode_unicode_escape.re_hex (regex)")?;
