@@ -103,7 +103,7 @@ pub fn run(args: &[String]) -> Result<()> {
         bail!("{}", HELP_MSG);
     }
 
-    let (book, chapter) = (&args[0], &args[1]);
+    let (book, chapter) = (&args[0].to_uppercase(), &args[1]);
 
     let url = format!("https://www.bible.com/ja/bible/1819/{book}.{chapter}/");
 
@@ -147,7 +147,7 @@ pub fn run(args: &[String]) -> Result<()> {
     let mut stdin = child.stdin.take().context("failed to open stdin")?;
 
     // less への書き込み (途中で q で閉じられた場合の BrokenPipe エラーを許容する)
-    if let Err(e) = writeln!(stdin, "{}[{}]\n{}\n", book.cyan(), chapter.green(), text)
+    if let Err(e) = write!(stdin, "{}[{}]\n{}", book.cyan(), chapter.green(), text)
         && e.kind() != std::io::ErrorKind::BrokenPipe
     {
         let _ = child.kill();
