@@ -5,8 +5,8 @@ use anyhow::{Context, Result, bail};
 
 mod go;
 mod odin;
+mod v;
 mod zig;
-// mod v;
 // mod vim;
 
 const HELP_MSG: &str = r"
@@ -70,16 +70,12 @@ pub fn run(args: &[String]) -> Result<()> {
                 .context(format!("not found key: '{}'", cmd))?;
             go::run(dist_dir, &download_dir)
         }
-        // "go" => {
-        //     let dist_dir = match section.get("go") {
-        //         Some(path) => path,
-        //         None => {
-        //             eprintln!(r#"nightup ini: not found path: "go""#);
-        //             return ExitCode::FAILURE;
-        //         }
-        //     };
-        //     go::run(dist_dir, &download_dir)
-        // }
+        cmd @ "v" => {
+            let dist_dir = section
+                .get(cmd)
+                .context(format!("not found key: '{}'", cmd))?;
+            v::run(dist_dir, &download_dir)
+        }
         // "vim" => vim::run("", &download_dir),
         _ => {
             eprintln!("nightup: unknown command '{}'", command);

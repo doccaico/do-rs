@@ -26,7 +26,7 @@ pub fn run(dist_dir: &str, download_dir: &str) -> Result<()> {
 
     // ダウンロードURLを取得する
     let re_filename = Regex::new(r#""filename":\s*"(go[0-9.]+\.windows-amd64\.zip)""#)
-        .expect("failed to compile go.re_url (regex)");
+        .expect("failed to compile go.re_filename (regex)");
 
     // 抽出できた URL を格納する変数
     let filename = re_filename

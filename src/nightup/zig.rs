@@ -13,6 +13,13 @@ pub fn run(dist_dir: &str, download_dir: &str) -> Result<()> {
         .args(["-sSL", "-A", "Mozilla/5.0", json_url])
         .output()
         .context("failed to run 'curl'")?;
+
+    if !output.status.success() {
+        bail!(
+            "'curl' failed with error: {}",
+            output.status.code().unwrap()
+        );
+    }
     println!("Download (index.json) is done");
 
     let contents = String::from_utf8_lossy(&output.stdout);
