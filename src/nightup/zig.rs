@@ -67,7 +67,7 @@ pub fn run(dist_dir: &str, download_dir: &str) -> Result<()> {
 
         if !status.success() {
             bail!(format!(
-                "curl failed with error: {}",
+                "'curl' failed with error: {}",
                 status.code().unwrap()
             ));
         }
@@ -84,7 +84,7 @@ pub fn run(dist_dir: &str, download_dir: &str) -> Result<()> {
             .context("failed to run 'tar'")?;
 
         if !status.success() {
-            bail!("tar failed with error: {}", status.code().unwrap());
+            bail!("'tar' failed with error: {}", status.code().unwrap());
         }
 
         println!("Extraction is done");
