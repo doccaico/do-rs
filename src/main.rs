@@ -30,8 +30,6 @@ fn main() -> ExitCode {
     match run() {
         Ok(_) => ExitCode::SUCCESS,
         Err(err) => {
-            // anyhow のエラーを標準エラー出力に綺麗に表示
-            // eprintln!("{:?}", err);
             eprintln!("{}", err);
             ExitCode::FAILURE
         }
