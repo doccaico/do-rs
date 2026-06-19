@@ -70,7 +70,10 @@ pub fn run(args: &[String]) -> Result<()> {
         .context("failed to 'curl'")?;
 
     if !output.status.success() {
-        bail!("'curl' failed with error: {}", output.status.code().unwrap());
+        bail!(
+            "'curl' failed with error: {}",
+            output.status.code().unwrap()
+        );
     }
 
     let raw_json = String::from_utf8_lossy(&output.stdout);
@@ -95,7 +98,7 @@ pub fn run(args: &[String]) -> Result<()> {
                 "{}:{}:{}\n",
                 idx.to_string().magenta(),
                 title.cyan(),
-                format!("https://ja.wikipedia.org/?curid={id}").green(),
+                format!("https://ja.wikipedia.org/?curid={}", id).green(),
             ));
             idx += 1;
         }
