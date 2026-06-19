@@ -45,7 +45,7 @@ pub fn run(args: &[String]) -> Result<()> {
         }
 
         if output.stdout.is_empty() {
-            println!("{}", "There is no need to update");
+            println!("There is no need to update");
             return Ok(());
         }
 
@@ -115,9 +115,9 @@ pub fn run(args: &[String]) -> Result<()> {
     Ok(())
 }
 
-fn indent(source: &Vec<u8>, size: usize) -> String {
+fn indent(source: &[u8], size: usize) -> String {
     let indent_prefix = " ".repeat(size);
-    let source_str = String::from_utf8_lossy(&source);
+    let source_str = String::from_utf8_lossy(source);
     source_str
         .lines()
         .map(|line| {
