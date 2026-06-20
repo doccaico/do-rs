@@ -11,6 +11,9 @@
 ### Build and Minimizing Binary Size
 ```sh
 $ cargo build --release
+
+$ cd target\release
+
 $ upx --best --lzma do.exe
 ```
 
