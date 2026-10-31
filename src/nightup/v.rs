@@ -52,7 +52,7 @@ pub fn run(dist_dir: &str, download_dir: &str) -> Result<()> {
         .context(format!("failed to create {}", work_dir_path.display()))?;
     println!("Created: '{}'", work_dir_path.display());
 
-    let local_zip_name = "go-latest.zip";
+    let local_zip_name = "v-latest.zip";
     let local_zip_path = Path::new(&work_dir_path).join(local_zip_name);
 
     // curlで最新のZIPファイルをダウンロード

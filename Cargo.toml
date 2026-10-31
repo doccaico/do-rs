@@ -9,9 +9,9 @@ regex = "1.12.3"
 rust-ini = "0.21.3"
 colored = "3"
 
- [profile.release]
- strip = true
- opt-level = "z" # or "s"
- lto = true
- codegen-units = 1
- panic = "abort"
+[profile.release]
+strip = true
+opt-level = "z" # or "s"
+lto = true
+codegen-units = 1
+panic = "abort"
