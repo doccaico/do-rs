@@ -1,9 +1,10 @@
 use ini::Ini;
 use std::env;
 
-use anyhow::{Context, Result, bail};
+use anyhow::{bail, Context, Result};
 
 mod go;
+mod nim;
 mod odin;
 mod v;
 mod vim;
@@ -15,6 +16,7 @@ Usage:
     do.exe nightup odin
     do.exe nightup go
     do.exe nightup v
+    do.exe nightup nim
     do.exe nightup vim
 OPTION:
     -h, --help                 ヘルプメッセージを表示
@@ -25,6 +27,7 @@ OPTION:
 zig=C:\Langs\zig
 odin=C:\Langs\odin
 go=C:\Langs\go
+v=C:\Langs\nim
 v=C:\Langs\v";
 
 pub fn run(args: &[String]) -> Result<()> {
@@ -75,6 +78,12 @@ pub fn run(args: &[String]) -> Result<()> {
                 .get(cmd)
                 .context(format!("not found key: '{}'", cmd))?;
             v::run(dist_dir, &download_dir)
+        }
+        cmd @ "nim" => {
+            let dist_dir = section
+                .get(cmd)
+                .context(format!("not found key: '{}'", cmd))?;
+            nim::run(dist_dir, &download_dir)
         }
         "vim" => vim::run(),
         _ => {
