@@ -1,7 +1,7 @@
 use ini::Ini;
 use std::env;
 
-use anyhow::{bail, Context, Result};
+use anyhow::{Context, Result, bail};
 
 mod go;
 mod nim;
